@@ -2,6 +2,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from ai_core.schemas.attachment import Attachment
+
 
 class ToolCall(BaseModel):
     id: str
@@ -14,4 +16,4 @@ class ToolResult(BaseModel):
     name: str
     content: str
     is_error: bool = False
-    metadata: dict[str, Any] = {}
+    attachments: list[Attachment] = []

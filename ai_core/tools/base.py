@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from ai_core.schemas.attachment import Attachment
+
 
 class BaseTool(ABC):
     name: str
@@ -13,13 +15,20 @@ class BaseTool(ABC):
     @abstractmethod
     def run(self, input: dict[str, Any]) -> str: ...
 
-    def run_with_metadata(self, input: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-        """Run the tool and return (content_str, metadata_dict).
+    def run_with_attachments(
+        self, input: dict[str, Any]
+    ) -> tuple[str, list[Attachment]]:
+        """Run the tool and return (content, attachments).
 
-        Override in tools that produce side effects like files.
-        Default: calls run() with empty metadata.
+        Override in tools that produce side-effect output (rendered images,
+        structured datasets, etc.). The default delegates to `run` and
+        returns no attachments.
+
+        Each `Attachment` is forwarded to the SSE stream as a typed event;
+        `ai_core` never inspects `attachment.kind`, so consumers are free to
+        introduce new kinds without library changes.
         """
-        return self.run(input), {}
+        return self.run(input), []
 
     def to_anthropic_spec(self) -> dict[str, Any]:
         return {

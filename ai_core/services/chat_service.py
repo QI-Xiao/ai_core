@@ -75,25 +75,13 @@ def stream_chat(
                     yield {"type": "tool_call", "name": tc.name}
                 results = _execute_tool_calls(resp, tool_map)
                 for r in results:
-                    for kind_key, kind_name in (
-                        ("plot_filename", "image"),
-                        ("timeseries_data", "timeseries"),
-                        ("qc_comparison_data", "qc_comparison"),
-                    ):
-                        if kind_key not in r.metadata:
-                            continue
-                        if kind_key == "plot_filename":
-                            yield {
-                                "type": "attachment",
-                                "kind": "image",
-                                "url": f"/plots/{r.metadata[kind_key]}",
-                            }
-                        else:
-                            yield {
-                                "type": "attachment",
-                                "kind": kind_name,
-                                **r.metadata[kind_key],
-                            }
+                    for att in r.attachments:
+                        yield {
+                            "type": "attachment",
+                            "kind": att.kind,
+                            "url":  att.url,
+                            "data": att.data,
+                        }
                 messages = provider.build_tool_result_messages(messages, resp, results)
             for token in provider.stream_response(messages, system=system_prompt):
                 collected.append(token)
@@ -148,9 +136,10 @@ def _execute_tool_calls(response, tool_map: dict[str, BaseTool]) -> list[ToolRes
             ))
             continue
         try:
-            content, metadata = tool.run_with_metadata(tc.input)
+            content, attachments = tool.run_with_attachments(tc.input)
             results.append(ToolResult(
-                tool_call_id=tc.id, name=tc.name, content=content, metadata=metadata,
+                tool_call_id=tc.id, name=tc.name,
+                content=content, attachments=attachments,
             ))
         except Exception as exc:
             results.append(ToolResult(
